@@ -33,9 +33,11 @@ runtimeEnv._G = runtimeEnv
 runtimeEnv.getgenv = function() return runtimeEnv end
 rootEnv.__E17_MM2_MODULAR_ENV = runtimeEnv
 
+local cacheBust = tostring(os.time()) .. "_" .. tostring(math.random(100000, 999999))
+
 local function loadModule(name)
     local okHttp, source = pcall(function()
-        return game:HttpGet(BASE .. name)
+        return game:HttpGet(BASE .. name .. "?v=" .. cacheBust)
     end)
     if not okHttp or type(source) ~= "string" or #source == 0 then
         error("[MM2 Experiment17] HTTP FAILED: " .. name .. " | " .. tostring(source))
