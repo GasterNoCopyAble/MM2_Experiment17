@@ -1,97 +1,6 @@
--- Experiment17 MM2 modular v7 | module 10
-function StartTouchFling()
-TouchFlingToken += 1
-local token = TouchFlingToken
-RestoreNoclip()
-RestoreAntiFlingCollision()
-task.spawn(function()
-local moveOffset = 0.1
-while State.TouchFling
-and token == TouchFlingToken
-and not Library.Unloaded
-do
-RunService.Heartbeat:Wait()
-local root = GetRoot(LP)
-if root then
-moveOffset = HiddenFlingPulse(root, moveOffset)
-end
-end
-end)
-end
-function StopTouchFling()
-TouchFlingToken += 1
-local root = GetRoot(LP)
-if root then root.AssemblyAngularVelocity = Vector3.zero end
-if State.Noclip then task.defer(ApplyNoclip) end
-end
-function FlingTarget(player)
-if State.TargetFlingActive then return false end
-if not player or player == LP then
-Notify("Target Fling", "Select a target", "Warning")
-return false
-end
-local root = GetRoot(LP)
-local targetRoot = GetRoot(player)
-if not root or not targetRoot then return false end
-State.TargetFlingActive = true
-RestoreNoclip()
-RestoreAntiFlingCollision()
-local oldCF = root.CFrame
-local oldLinear = root.AssemblyLinearVelocity
-local started = os.clock()
-local moveOffset = 0.1
-while State.TargetFlingActive
-and os.clock() - started < State.TargetFlingDuration
-and not Library.Unloaded
-do
-root = GetRoot(LP)
-targetRoot = GetRoot(player)
-if not root or not targetRoot or not IsCharacterAlive(player) then
-break
-end
-root.CFrame = targetRoot.CFrame
-root.AssemblyAngularVelocity = Vector3.zero
-RunService.Heartbeat:Wait()
-moveOffset = HiddenFlingPulse(root, moveOffset)
-end
-root = GetRoot(LP)
-if root then
-root.CFrame = oldCF
-root.AssemblyLinearVelocity = oldLinear
-root.AssemblyAngularVelocity = Vector3.zero
-end
-State.TargetFlingActive = false
-if State.Noclip and not State.FlingAllActive then
-task.defer(ApplyNoclip)
-end
-return true
-end
-function FlingAll()
-if State.FlingAllActive then return end
-State.FlingAllActive = true
-task.spawn(function()
-local root = GetRoot(LP)
-local oldCF = root and root.CFrame
-for _, player in ipairs(Players:GetPlayers()) do
-if not State.FlingAllActive or Library.Unloaded then break end
-if player ~= LP and IsAliveFromRoleData(player) then
-while State.TargetFlingActive do
-RunService.Heartbeat:Wait()
-end
-FlingTarget(player)
-task.wait(0.04)
-end
-end
-root = GetRoot(LP)
-if root and oldCF then
-root.CFrame = oldCF
-root.AssemblyLinearVelocity = Vector3.zero
-root.AssemblyAngularVelocity = Vector3.zero
-end
-State.FlingAllActive = false
-if State.Noclip then task.defer(ApplyNoclip) end
-end)
-end
+-- Experiment 17 | Private MM2 modular v7 | Target / teleport / bookmarks
+-- Semantic feature module. Loaded by init.lua into one shared runtime environment.
+
 TargetMainChoice
 BookmarkChoice
 BookmarkNameValue = "Bookmark"
@@ -334,5 +243,22 @@ Camera = Workspace.CurrentCamera or Camera
 if not Camera then return false end
 State.FreecamBookmark = State.Freecam and FreecamCF or Camera.CFrame
 Notify("Freecam Bookmark", "Camera position saved", "Success")
+return true
+end
+function LoadFreecamBookmark()
+if not State.FreecamBookmark then
+Notify("Freecam Bookmark", "No camera bookmark saved", "Warning")
+return false
+end
+Camera = Workspace.CurrentCamera or Camera
+if not Camera then return false end
+if State.Freecam then
+FreecamCF = State.FreecamBookmark
+local x, y, _ = FreecamCF:ToOrientation()
+FreecamPitch = x
+FreecamYaw = y
+else
+Camera.CFrame = State.FreecamBookmark
+end
 return true
 end

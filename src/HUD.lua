@@ -1,137 +1,6 @@
--- Experiment17 MM2 modular v7 | module 03
-function ShootMurdererSequence(retryRemaining)
-if State.ShootInProgress then return false end
-if retryRemaining == nil then
-retryRemaining = State.ShootRetry and State.ShootRetryCount or 0
-end
-local role = GetLocalRole()
-if role ~= "Sheriff" and role ~= "Hero" then
-Notify("Shoot Murderer", "Current role is not Sheriff/Hero", "Warning")
-return false
-end
-local murderer = GetMurderer()
-local root = GetRoot(LP)
-local targetRoot = GetRoot(murderer)
-if not murderer or not root or not targetRoot then return false end
-local gun = EquipTool("Gun")
-if not gun then
-Notify("Shoot Murderer", "Gun was not found", "Warning")
-return false
-end
-State.ShootInProgress = true
-local oldCF = root.CFrame
-local oldLinear = root.AssemblyLinearVelocity
-local oldAngular = root.AssemblyAngularVelocity
-Camera = Workspace.CurrentCamera or Camera
-local oldCamera = Camera and Camera.CFrame
-local oldSilent = State.SilentShot
-local oldMouse = UIS:GetMouseLocation()
-local ok, err = pcall(function()
-local deadline = os.clock() + State.ShootFollowTime
-while os.clock() < deadline do
-murderer = GetMurderer()
-root = GetRoot(LP)
-targetRoot = GetRoot(murderer)
-if not murderer or not root or not targetRoot then break end
-local behind = (targetRoot.CFrame * CFrame.new(
-0, 0.15, State.ShootBehindDistance
-)).Position
-root.CFrame = CFrame.lookAt(
-behind,
-targetRoot.Position,
-Vector3.yAxis
-)
-root.AssemblyLinearVelocity = Vector3.zero
-root.AssemblyAngularVelocity = Vector3.zero
-Camera = Workspace.CurrentCamera or Camera
-if Camera then
-Camera.CFrame = CFrame.lookAt(
-Camera.CFrame.Position,
-targetRoot.Position,
-Vector3.yAxis
-)
-end
-RunService.Heartbeat:Wait()
-end
-if State.ShootTPDelay > 0 then
-task.wait(State.ShootTPDelay)
-end
-murderer = GetMurderer()
-targetRoot = GetRoot(murderer)
-if not murderer or not targetRoot then return end
-local targetPart = murderer.Character and (
-murderer.Character:FindFirstChild(State.SilentPart) or targetRoot
-)
-if not targetPart then return end
-if SilentHookAvailable then State.SilentShot = true end
-Camera = Workspace.CurrentCamera or Camera
-if Camera then
-Camera.CFrame = CFrame.lookAt(
-Camera.CFrame.Position,
-targetRoot.Position,
-Vector3.yAxis
-)
-if type(mousemoveabs) == "function" then
-local point = Camera:WorldToViewportPoint(targetPart.Position)
-if point.Z > 0 then
-pcall(function() mousemoveabs(point.X, point.Y) end)
-RunService.RenderStepped:Wait()
-end
-end
-end
-State.ShootAttempts += 1
-if Controls.ShootAttemptLabel and Controls.ShootAttemptLabel.Label then
-Controls.ShootAttemptLabel.Label.Text = "Shoot attempts: " .. tostring(State.ShootAttempts)
-end
-if type(mouse1click) == "function" then
-mouse1click()
-else
-gun:Activate()
-end
-task.wait(State.ShootReturnDelay)
-end)
-State.SilentShot = oldSilent
-root = GetRoot(LP)
-if root then
-root.CFrame = oldCF
-root.AssemblyLinearVelocity = oldLinear
-root.AssemblyAngularVelocity = oldAngular
-end
-Camera = Workspace.CurrentCamera or Camera
-if Camera and oldCamera then Camera.CFrame = oldCamera end
-if type(mousemoveabs) == "function" then
-pcall(function() mousemoveabs(oldMouse.X, oldMouse.Y) end)
-end
-State.ShootInProgress = false
-if not ok then
-warn("[Experiment17 MM2] Shoot sequence:", err)
-end
-if ok
-and retryRemaining > 0
-and State.ShootRetry
-and GetMurderer()
-then
-task.wait(State.ShootRetryDelay)
-return ShootMurdererSequence(retryRemaining - 1)
-end
-return ok
-end
-task.spawn(function()
-while not Library.Unloaded do
-task.wait(0.12)
-if State.AutoShootMurderer
-and not State.ShootInProgress
-and (GetLocalRole() == "Sheriff" or GetLocalRole() == "Hero")
-and GetMurderer()
-then
-local now = os.clock()
-if now - State.LastGunShot >= 1.15 then
-State.LastGunShot = now
-task.spawn(ShootMurdererSequence)
-end
-end
-end
-end)
+-- Experiment 17 | Private MM2 modular v7 | HUD / visual runtime
+-- Semantic feature module. Loaded by init.lua into one shared runtime environment.
+
 Overlay = Instance.new("Frame")
 Overlay.Name = "E17_MM2_Overlay"
 Overlay.Parent = Library.Root
@@ -367,4 +236,100 @@ if State.FPSGuardActive then
 interval = math.max(interval, 1 / 10)
 end
 return interval
+end
+function GetWorldInterval()
+local interval = RateToInterval(State.WorldUpdateRate, true)
+if State.AdaptivePerformance and State.CurrentFPS < State.AdaptiveFPSMin then
+interval = math.max(interval, 0.75)
+end
+if State.FPSGuardActive then
+interval = math.max(interval, 1.0)
+end
+return interval
+end
+Connect(RunService.RenderStepped, function(dt)
+State.FPSAccumulator += dt
+State.FPSFrames += 1
+if State.FPSAccumulator >= 1 then
+State.CurrentFPS = State.FPSFrames / State.FPSAccumulator
+State.FPSAccumulator = 0
+State.FPSFrames = 0
+local now = os.clock()
+if State.LowFPSWarning
+and State.CurrentFPS < State.LowFPSWarningThreshold
+and now - State.LastLowFPSWarning >= 8
+then
+State.LastLowFPSWarning = now
+Notify(
+"Low FPS Warning",
+string.format("FPS: %.0f", State.CurrentFPS),
+"Warning",
+3,
+"Performance"
+)
+end
+if State.FPSGuard then
+if State.CurrentFPS < State.FPSGuardThreshold then
+State.FPSGuardHighSince = nil
+State.FPSGuardLowSince = State.FPSGuardLowSince or now
+if not State.FPSGuardActive and now - State.FPSGuardLowSince >= 2 then
+State.FPSGuardActive = true
+Notify(
+"FPS Guard",
+"Heavy visuals throttled",
+"Warning",
+3,
+"Performance"
+)
+end
+else
+State.FPSGuardLowSince = nil
+if State.FPSGuardActive and State.CurrentFPS >= State.FPSGuardThreshold + 8 then
+State.FPSGuardHighSince = State.FPSGuardHighSince or now
+if now - State.FPSGuardHighSince >= 3 then
+State.FPSGuardActive = false
+State.FPSGuardHighSince = nil
+Notify(
+"FPS Guard",
+"Normal visual quality restored",
+"Success",
+3,
+"Performance"
+)
+end
+else
+State.FPSGuardHighSince = nil
+end
+end
+else
+State.FPSGuardActive = false
+State.FPSGuardLowSince = nil
+State.FPSGuardHighSince = nil
+end
+end
+end)
+function SetEdgeArrow(arrow, worldPosition, color, radiusScale)
+Camera = Workspace.CurrentCamera or Camera
+if not Camera or not arrow then return false end
+local point, onScreen = Camera:WorldToViewportPoint(worldPosition)
+if onScreen and point.Z > 0 then
+arrow.Visible = false
+return false
+end
+local viewport = Camera.ViewportSize
+local center = Vector2.new(viewport.X * 0.5, viewport.Y * 0.5)
+local delta = Vector2.new(point.X, point.Y) - center
+if point.Z < 0 then delta = -delta end
+if delta.Magnitude < 0.001 then
+delta = Vector2.new(0, -1)
+else
+delta = delta.Unit
+end
+local radius = math.min(viewport.X, viewport.Y) * (radiusScale or 0.42)
+local position = center + delta * radius
+arrow.Position = UDim2.fromOffset(position.X, position.Y)
+arrow.Rotation = math.deg(math.atan2(delta.Y, delta.X)) + 90
+arrow.TextColor3 = color
+arrow.Visible = true
+return true
 end

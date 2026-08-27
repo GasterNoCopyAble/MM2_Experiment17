@@ -1,61 +1,6 @@
--- Experiment17 MM2 modular v7 | module 16
-CoreFavorites = {
-Controls.KillAll,
-Controls.ShootMurderer,
-Controls.ESP,
-Controls.PlayerChams,
-Controls.GunESP,
-Controls.GunPickup,
-Controls.CoinESP,
-Controls.MurdererWarning,
-Controls.RoleArrow,
-Controls.XRay,
-Controls.ScreenshotMode,
-Controls.Skeleton,
-Controls.Heatmap,
-Controls.WalkSpeed,
-Controls.JumpHack,
-Controls.Fly,
-Controls.Noclip,
-Controls.ClickTP,
-Controls.Ghost,
-SpectateToggle,
-Controls.Freecam,
-Controls.AntiFling,
-Controls.TouchFling,
-Controls.FlingTarget,
-Controls.FlingAll,
-}
-FavoritesSection:AddParagraph({
-Text = "Every normal Experiment17 control already supports the native ★ Favorites panel. Right-click a function to add/remove it. These are bulk shortcuts.",
-Height = 68,
-})
-FavoritesSection:AddButton({
-Name = "Add Core Favorites",
-ButtonText = "Add",
-Description = "Adds the main MM2/ESP/Player/Camera/Fling functions to the native ★ Favorites panel.",
-FPSImpact = 0,
-PingImpact = 0,
-Callback = function()
-for _, control in ipairs(CoreFavorites) do
-if control then Library:SetFavorite(control, true) end
-end
-Notify("Favorites", "Core functions added", "Success")
-end,
-})
-FavoritesSection:AddButton({
-Name = "Clear Favorites",
-ButtonText = "Clear",
-Description = "Clears the native ★ Favorites panel.",
-FPSImpact = 0,
-PingImpact = 0,
-Callback = function()
-local order = table.clone(Library.FavoriteOrder or {})
-for _, control in ipairs(order) do
-Library:SetFavorite(control, false)
-end
-end,
-})
+-- Experiment 17 | Private MM2 modular v7 | Lifecycle / cleanup
+-- Semantic feature module. Loaded by init.lua into one shared runtime environment.
+
 Connect(LP.CharacterAdded, function(character)
 FlyVelocity = nil
 FlyGyro = nil

@@ -1,4 +1,138 @@
--- Experiment17 MM2 modular v7 | module 07
+-- Experiment 17 | Private MM2 modular v7 | World
+-- Semantic feature module. Loaded by init.lua into one shared runtime environment.
+
+function GetAdornmentPart(object)
+if not object then return nil end
+if object:IsA("BasePart") then return object end
+if object:IsA("Tool") then
+return object:FindFirstChild("Handle")
+or object:FindFirstChildWhichIsA("BasePart", true)
+end
+if object:IsA("Model") then
+return object.PrimaryPart
+or object:FindFirstChildWhichIsA("BasePart", true)
+end
+return nil
+end
+function IsDroppedGunCandidate(object)
+if not object or IsInsideAnyCharacter(object) then return false end
+local lower = string.lower(object.Name)
+if lower == "gundrop"
+or lower == "droppedgun"
+or lower == "dropped gun"
+or lower == "sheriffgun"
+then
+return GetAdornmentPart(object) ~= nil
+end
+if object:IsA("Tool")
+and lower == "gun"
+and object:IsDescendantOf(Workspace)
+then
+return GetAdornmentPart(object) ~= nil
+end
+return false
+end
+function IsCoinCandidate(object)
+if not object or IsInsideAnyCharacter(object) then return false end
+local lower = string.lower(object.Name)
+if not string.find(lower, "coin", 1, true) then
+return false
+end
+return GetAdornmentPart(object) ~= nil
+end
+WorldCache = {
+Guns = {},
+Coins = {},
+}
+function ClassifyWorldObject(object)
+if not object or not object.Parent then return end
+if IsDroppedGunCandidate(object) then
+WorldCache.Guns[object] = true
+end
+if IsCoinCandidate(object) then
+WorldCache.Coins[object] = true
+end
+end
+function RemoveWorldObject(object)
+WorldCache.Guns[object] = nil
+WorldCache.Coins[object] = nil
+end
+function RebuildWorldCache()
+table.clear(WorldCache.Guns)
+table.clear(WorldCache.Coins)
+for _, object in ipairs(Workspace:GetDescendants()) do
+ClassifyWorldObject(object)
+end
+end
+Connect(Workspace.DescendantAdded, function(object)
+if State.ObjectCache then
+task.defer(function()
+if object and object.Parent then
+ClassifyWorldObject(object)
+end
+end)
+end
+end)
+Connect(Workspace.DescendantRemoving, function(object)
+RemoveWorldObject(object)
+end)
+task.defer(RebuildWorldCache)
+function GetGunCandidates()
+local result = {}
+if State.ObjectCache then
+for object in pairs(WorldCache.Guns) do
+if object and object.Parent and IsDroppedGunCandidate(object) then
+result[#result + 1] = object
+else
+WorldCache.Guns[object] = nil
+end
+end
+else
+for _, object in ipairs(Workspace:GetDescendants()) do
+if IsDroppedGunCandidate(object) then
+result[#result + 1] = object
+end
+end
+end
+return result
+end
+function GetCoinCandidates()
+local result = {}
+if State.ObjectCache then
+for object in pairs(WorldCache.Coins) do
+if object and object.Parent and IsCoinCandidate(object) then
+result[#result + 1] = object
+else
+WorldCache.Coins[object] = nil
+end
+end
+else
+for _, object in ipairs(Workspace:GetDescendants()) do
+if IsCoinCandidate(object) then
+result[#result + 1] = object
+end
+end
+end
+return result
+end
+function FindDroppedGun()
+local best = nil
+local bestDistance = math.huge
+local localRoot = GetRoot(LP)
+for _, object in ipairs(GetGunCandidates()) do
+local part = GetAdornmentPart(object)
+if part then
+local distance = localRoot
+and (part.Position - localRoot.Position).Magnitude
+or 0
+if distance < bestDistance then
+best = object
+bestDistance = distance
+end
+end
+end
+return best, bestDistance
+end
 function FindNearestCoins()
 local localRoot = GetRoot(LP)
 if not localRoot then return {} end
@@ -448,3 +582,68 @@ part.LocalTransparencyModifier = old
 end)
 end
 end
+function RestoreXRay()
+for part in pairs(XRayActive) do
+RestoreXRayPart(part)
+XRayActive[part] = nil
+end
+end
+function UpdateXRay()
+if not State.XRay or State.ScreenshotMode or State.FPSGuardActive then
+RestoreXRay()
+return
+end
+Camera = Workspace.CurrentCamera or Camera
+if not Camera then return end
+local points = {}
+local ignore = {}
+if LP.Character then
+table.insert(ignore, LP.Character)
+end
+for _, player in ipairs(Players:GetPlayers()) do
+if player ~= LP and player.Character and IsAliveFromRoleData(player) then
+local root = GetRoot(player)
+local head = player.Character:FindFirstChild("Head")
+if root then table.insert(points, root.Position) end
+if head then table.insert(points, head.Position) end
+table.insert(ignore, player.Character)
+end
+end
+local visibleNow = {}
+if #points > 0 then
+local ok, parts = pcall(function()
+return Camera:GetPartsObscuringTarget(points, ignore)
+end)
+if ok and type(parts) == "table" then
+for _, part in ipairs(parts) do
+if part
+and part:IsA("BasePart")
+and part.Parent
+and not IsInsideAnyCharacter(part)
+then
+if XRayCache[part] == nil then
+XRayCache[part] = part.LocalTransparencyModifier
+end
+part.LocalTransparencyModifier = math.max(
+XRayCache[part],
+State.XRayTransparency
+)
+visibleNow[part] = true
+XRayActive[part] = true
+end
+end
+end
+end
+for part in pairs(XRayActive) do
+if not visibleNow[part] then
+RestoreXRayPart(part)
+XRayActive[part] = nil
+end
+end
+end
+task.spawn(function()
+while not Library.Unloaded do
+if State.XRay then UpdateXRay() end
+task.wait(0.08)
+end
+end)

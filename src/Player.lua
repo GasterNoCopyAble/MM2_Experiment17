@@ -1,69 +1,6 @@
--- Experiment17 MM2 modular v7 | module 08
-function RestoreXRay()
-for part in pairs(XRayActive) do
-RestoreXRayPart(part)
-XRayActive[part] = nil
-end
-end
-function UpdateXRay()
-if not State.XRay or State.ScreenshotMode or State.FPSGuardActive then
-RestoreXRay()
-return
-end
-Camera = Workspace.CurrentCamera or Camera
-if not Camera then return end
-local points = {}
-local ignore = {}
-if LP.Character then
-table.insert(ignore, LP.Character)
-end
-for _, player in ipairs(Players:GetPlayers()) do
-if player ~= LP and player.Character and IsAliveFromRoleData(player) then
-local root = GetRoot(player)
-local head = player.Character:FindFirstChild("Head")
-if root then table.insert(points, root.Position) end
-if head then table.insert(points, head.Position) end
-table.insert(ignore, player.Character)
-end
-end
-local visibleNow = {}
-if #points > 0 then
-local ok, parts = pcall(function()
-return Camera:GetPartsObscuringTarget(points, ignore)
-end)
-if ok and type(parts) == "table" then
-for _, part in ipairs(parts) do
-if part
-and part:IsA("BasePart")
-and part.Parent
-and not IsInsideAnyCharacter(part)
-then
-if XRayCache[part] == nil then
-XRayCache[part] = part.LocalTransparencyModifier
-end
-part.LocalTransparencyModifier = math.max(
-XRayCache[part],
-State.XRayTransparency
-)
-visibleNow[part] = true
-XRayActive[part] = true
-end
-end
-end
-end
-for part in pairs(XRayActive) do
-if not visibleNow[part] then
-RestoreXRayPart(part)
-XRayActive[part] = nil
-end
-end
-end
-task.spawn(function()
-while not Library.Unloaded do
-if State.XRay then UpdateXRay() end
-task.wait(0.08)
-end
-end)
+-- Experiment 17 | Private MM2 modular v7 | Player / movement
+-- Semantic feature module. Loaded by init.lua into one shared runtime environment.
+
 OriginalWalkSpeed = 16
 OriginalJumpPower = 50
 OriginalJumpHeight = 7.2
@@ -324,3 +261,136 @@ end
 end
 if not hidden then table.clear(GhostTransparencyCache) end
 end
+function DestroyGhost()
+if GhostModel then GhostModel:Destroy() end
+GhostModel = nil
+GhostRoot = nil
+GhostHumanoid = nil
+table.clear(GhostMotorMap)
+end
+function BuildGhostMotorMap(realCharacter, clone)
+table.clear(GhostMotorMap)
+local cloneMotors = {}
+for _, object in ipairs(clone:GetDescendants()) do
+if object:IsA("Motor6D") then
+cloneMotors[object.Name] = cloneMotors[object.Name] or {}
+table.insert(cloneMotors[object.Name], object)
+end
+end
+for _, object in ipairs(realCharacter:GetDescendants()) do
+if object:IsA("Motor6D") then
+local list = cloneMotors[object.Name]
+if list and list[1] then
+table.insert(GhostMotorMap, {
+Real = object,
+Ghost = table.remove(list, 1),
+})
+end
+end
+end
+end
+function EnableGhost()
+if GhostModel then return true end
+local character = LP.Character
+local root = GetRoot(LP)
+local humanoid = GetHumanoid(LP)
+if not character or not root or not humanoid then return false end
+local oldArchivable = character.Archivable
+character.Archivable = true
+local clone = character:Clone()
+character.Archivable = oldArchivable
+clone.Name = "E17_LocalGhost"
+for _, object in ipairs(clone:GetDescendants()) do
+if object:IsA("Script") or object:IsA("LocalScript") or object:IsA("Tool") then
+object:Destroy()
+elseif object:IsA("BasePart") then
+object.CanCollide = false
+object.CanTouch = false
+object.CanQuery = false
+object.Massless = true
+object.LocalTransparencyModifier = 0
+end
+end
+local ghostRoot = clone:FindFirstChild("HumanoidRootPart")
+local ghostHumanoid = clone:FindFirstChildOfClass("Humanoid")
+if not ghostRoot or not ghostHumanoid then
+clone:Destroy()
+return false
+end
+clone:PivotTo(root.CFrame)
+clone.Parent = Workspace
+ghostRoot.Anchored = true
+ghostHumanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+BuildGhostMotorMap(character, clone)
+GhostModel = clone
+GhostRoot = ghostRoot
+GhostHumanoid = ghostHumanoid
+SetRealHidden(true)
+root.AssemblyLinearVelocity = Vector3.zero
+root.AssemblyAngularVelocity = Vector3.zero
+root.CFrame = root.CFrame + Vector3.new(0, State.GhostHeight, 0)
+root.Anchored = true
+humanoid.AutoRotate = false
+Camera = Workspace.CurrentCamera or Camera
+if Camera then Camera.CameraSubject = ghostHumanoid end
+return true
+end
+function DisableGhost(returnToGhost)
+local realRoot = GetRoot(LP)
+local realHumanoid = GetHumanoid(LP)
+local returnCF = GhostRoot and GhostRoot.CFrame or nil
+if realRoot then
+realRoot.Anchored = false
+if returnToGhost and returnCF then
+realRoot.CFrame = returnCF + Vector3.new(0, 1.8, 0)
+realRoot.AssemblyLinearVelocity = Vector3.zero
+realRoot.AssemblyAngularVelocity = Vector3.zero
+end
+end
+if realHumanoid then
+realHumanoid.PlatformStand = false
+realHumanoid.AutoRotate = true
+end
+SetRealHidden(false)
+Camera = Workspace.CurrentCamera or Camera
+if Camera and realHumanoid then Camera.CameraSubject = realHumanoid end
+DestroyGhost()
+end
+Connect(RunService.RenderStepped, function(dt)
+if not State.GhostMode then return end
+if not GhostModel or not GhostRoot or not GhostRoot.Parent then
+if not EnableGhost() then return end
+end
+local humanoid = GetHumanoid(LP)
+if not humanoid then return end
+Camera = Workspace.CurrentCamera or Camera
+local move = humanoid.MoveDirection
+local vertical = 0
+if IsKeyDown(Enum.KeyCode.Space) then vertical += 1 end
+if IsKeyDown(Enum.KeyCode.LeftControl)
+or IsKeyDown(Enum.KeyCode.RightControl)
+or IsKeyDown(Enum.KeyCode.C)
+then
+vertical -= 1
+end
+local delta = Vector3.new(move.X, 0, move.Z)
++ Vector3.new(0, vertical, 0)
+if delta.Magnitude > 1 then delta = delta.Unit end
+local position = GhostRoot.Position + delta * State.GhostSpeed * dt
+local look = Camera and Camera.CFrame.LookVector or GhostRoot.CFrame.LookVector
+local flat = Vector3.new(look.X, 0, look.Z)
+local rotation = GhostRoot.CFrame.Rotation
+if flat.Magnitude > 0.001 then
+rotation = CFrame.lookAt(
+Vector3.zero,
+flat.Unit,
+Vector3.yAxis
+).Rotation
+end
+GhostRoot.CFrame = CFrame.new(position) * rotation
+for _, pair in ipairs(GhostMotorMap) do
+if pair.Real and pair.Real.Parent and pair.Ghost and pair.Ghost.Parent then
+pair.Ghost.Transform = pair.Real.Transform
+end
+end
+end)
