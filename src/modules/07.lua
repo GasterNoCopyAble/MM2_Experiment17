@@ -10,11 +10,17 @@ if part and not seenParts[part] then
 seenParts[part] = true
 local distance = (part.Position - localRoot.Position).Magnitude
 if distance <= State.CoinMaxDistance then
-candidates[#candidates + 1] = {Object = object, Part = part, Distance = distance}
+candidates[#candidates + 1] = {
+Object = object,
+Part = part,
+Distance = distance,
+}
 end
 end
 end
-table.sort(candidates, function(a, b) return a.Distance < b.Distance end)
+table.sort(candidates, function(a, b)
+return a.Distance < b.Distance
+end)
 return candidates
 end
 GunESPObject
@@ -28,9 +34,19 @@ if GunESPObject.Billboard then GunESPObject.Billboard:Destroy() end
 GunESPObject = nil
 end
 function UpdateGunESP(gun, distance)
-if not State.DroppedGunESP or State.ScreenshotMode then CleanupGunESP() return end
+if not State.DroppedGunESP or State.ScreenshotMode then
+CleanupGunESP()
+return
+end
 local part = GetAdornmentPart(gun)
-if not gun or not part or distance > State.DroppedGunMaxDistance then CleanupGunESP() return end
+if not gun or not part then
+CleanupGunESP()
+return
+end
+if distance > State.DroppedGunMaxDistance then
+CleanupGunESP()
+return
+end
 if not GunESPObject or GunESPObject.Target ~= gun then
 CleanupGunESP()
 local highlight = Instance.new("Highlight")
@@ -55,7 +71,12 @@ label.Font = Enum.Font.GothamBold
 label.TextSize = 14
 label.TextStrokeTransparency = 0.2
 label.Text = "DROPPED GUN"
-GunESPObject = {Target = gun, Highlight = highlight, Billboard = gui, Label = label}
+GunESPObject = {
+Target = gun,
+Highlight = highlight,
+Billboard = gui,
+Label = label,
+}
 end
 GunESPObject.Highlight.FillColor = State.DroppedGunColor
 GunESPObject.Highlight.OutlineColor = State.DroppedGunColor
@@ -67,7 +88,10 @@ if State.GunPickupBusy then return false end
 local gun, distance = FindDroppedGun()
 local part = GetAdornmentPart(gun)
 local root = GetRoot(LP)
-if not gun or not part or not root then Notify("Gun Pickup TP", "Dropped gun not found", "Warning") return false end
+if not gun or not part or not root then
+Notify("Gun Pickup TP", "Dropped gun not found", "Warning")
+return false
+end
 State.GunPickupBusy = true
 State.LastReturnCFrame = root.CFrame
 local oldCF = root.CFrame
@@ -101,10 +125,15 @@ if data.Billboard then data.Billboard:Destroy() end
 CoinObjects[object] = nil
 end
 function CleanupCoins()
-for object in pairs(CoinObjects) do CleanupCoinObject(object) end
+for object in pairs(CoinObjects) do
+CleanupCoinObject(object)
+end
 end
 function UpdateCoinESP(nearestCoins)
-if not State.CoinESP or State.ScreenshotMode or State.FPSGuardActive then CleanupCoins() return end
+if not State.CoinESP or State.ScreenshotMode or State.FPSGuardActive then
+CleanupCoins()
+return
+end
 local found = {}
 local limit = math.min(State.CoinLimit, State.CoinNearestCount)
 for index, item in ipairs(nearestCoins) do
@@ -135,7 +164,11 @@ label.BackgroundTransparency = 1
 label.Font = Enum.Font.GothamBold
 label.TextSize = 11
 label.TextStrokeTransparency = 0.25
-data = {Highlight = highlight, Billboard = gui, Label = label}
+data = {
+Highlight = highlight,
+Billboard = gui,
+Label = label,
+}
 CoinObjects[object] = data
 end
 data.Highlight.FillColor = State.CoinColor
@@ -144,7 +177,9 @@ data.Label.TextColor3 = State.CoinColor
 data.Label.Text = string.format("COIN | %d", math.floor(item.Distance + 0.5))
 end
 for object in pairs(CoinObjects) do
-if not found[object] or not object.Parent then CleanupCoinObject(object) end
+if not found[object] or not object.Parent then
+CleanupCoinObject(object)
+end
 end
 end
 task.spawn(function()
@@ -157,11 +192,22 @@ CachedDroppedGun = gun
 CachedDroppedGunDistance = gunDistance or math.huge
 if gun ~= previousGun then
 if gun and State.GunSpawnNotification then
-Notify("Gun Spawn", string.format("Dropped gun found | %d studs", math.floor(CachedDroppedGunDistance + 0.5)), "Info", 3, "Gun")
+Notify(
+"Gun Spawn",
+string.format("Dropped gun found | %d studs", math.floor(CachedDroppedGunDistance + 0.5)),
+"Info",
+3,
+"Gun"
+)
 end
 previousGun = gun
 end
-if gun and State.AutoGunPickup and not State.GunPickupBusy and CachedDroppedGunDistance <= State.AutoGunPickupRange and os.clock() - State.LastAutoGunPickup >= 1.2 then
+if gun
+and State.AutoGunPickup
+and not State.GunPickupBusy
+and CachedDroppedGunDistance <= State.AutoGunPickupRange
+and os.clock() - State.LastAutoGunPickup >= 1.2
+then
 State.LastAutoGunPickup = os.clock()
 task.spawn(PickupDroppedGun)
 end
@@ -184,11 +230,19 @@ return
 end
 if State.DroppedGunArrow and CachedDroppedGun then
 local part = GetAdornmentPart(CachedDroppedGun)
-if part then SetEdgeArrow(DroppedGunArrowGui, part.Position, State.DroppedGunColor, 0.37) else DroppedGunArrowGui.Visible = false end
-else DroppedGunArrowGui.Visible = false end
+if part then
+SetEdgeArrow(DroppedGunArrowGui, part.Position, State.DroppedGunColor, 0.37)
+else
+DroppedGunArrowGui.Visible = false
+end
+else
+DroppedGunArrowGui.Visible = false
+end
 if State.NearestCoinArrow and CachedNearestCoin and CachedNearestCoin.Part then
 SetEdgeArrow(NearestCoinArrowGui, CachedNearestCoin.Part.Position, State.CoinColor, 0.33)
-else NearestCoinArrowGui.Visible = false end
+else
+NearestCoinArrowGui.Visible = false
+end
 end)
 function HasLineOfSight(fromRoot, targetPlayer, targetRoot)
 if not fromRoot or not targetPlayer or not targetRoot then return false end
@@ -202,16 +256,22 @@ local murderer = GetMurderer()
 if murderer and murderer.Character then table.insert(exclude, murderer.Character) end
 params.FilterDescendantsInstances = exclude
 local result = Workspace:Raycast(fromRoot.Position, delta, params)
-return result == nil or (targetPlayer.Character and result.Instance:IsDescendantOf(targetPlayer.Character))
+return result == nil
+or (targetPlayer.Character and result.Instance:IsDescendantOf(targetPlayer.Character))
 end
 function UpdateThreatHUD(murderer, distance, approachSpeed)
-local showThreatHUD = State.MurdererDistanceHUD or State.MurdererApproachHUD or State.MurdererDangerBar or State.MinimalHUD
+local showThreatHUD = State.MurdererDistanceHUD
+or State.MurdererApproachHUD
+or State.MurdererDangerBar
+or State.MinimalHUD
 ThreatHUD.Visible = showThreatHUD and not State.ScreenshotMode
 ThreatDangerBack.Visible = State.MurdererDangerBar or State.MinimalHUD
 if not showThreatHUD then return end
 if murderer and distance then
 local lines = {}
-if State.MurdererDistanceHUD or State.MinimalHUD then lines[#lines + 1] = string.format("%s | %d studs", GetStreamerDisplayName(murderer), math.floor(distance + 0.5)) end
+if State.MurdererDistanceHUD or State.MinimalHUD then
+lines[#lines + 1] = string.format("%s | %d studs", GetStreamerDisplayName(murderer), math.floor(distance + 0.5))
+end
 if State.MurdererApproachHUD and not State.MinimalHUD then
 local direction = approachSpeed > 1 and "CLOSING" or approachSpeed < -1 and "LEAVING" or "STABLE"
 lines[#lines + 1] = string.format("%s | %.1f studs/s", direction, math.abs(approachSpeed))
@@ -246,36 +306,82 @@ State.LastMurdererDistance = distance
 State.LastMurdererDistanceAt = now
 if State.MurdererWarning then
 if distance <= State.MurdererWarningDistance then
-if State.MurdererWarningArmed and now - State.LastMurdererWarning >= State.MurdererWarningCooldown then
+if State.MurdererWarningArmed
+and now - State.LastMurdererWarning >= State.MurdererWarningCooldown
+then
 State.LastMurdererWarning = now
 State.MurdererWarningArmed = false
-Notify("Murderer Warning", string.format("%s is %d studs away", GetStreamerDisplayName(murderer), math.floor(distance + 0.5)), "Warning", 2.4, "Murderer")
+Notify(
+"Murderer Warning",
+string.format("%s is %d studs away", GetStreamerDisplayName(murderer), math.floor(distance + 0.5)),
+"Warning",
+2.4,
+"Murderer"
+)
 end
-else State.MurdererWarningArmed = true end
+else
+State.MurdererWarningArmed = true
 end
-if State.MurdererBehindWarning and distance <= math.max(State.MurdererWarningDistance * 1.5, 60) and delta.Magnitude > 0.01 then
+end
+if State.MurdererBehindWarning
+and distance <= math.max(State.MurdererWarningDistance * 1.5, 60)
+and delta.Magnitude > 0.01
+then
 local behindDot = localRoot.CFrame.LookVector:Dot(delta.Unit)
 if behindDot < -0.35 and now - State.LastBehindWarning >= State.MurdererWarningCooldown then
 State.LastBehindWarning = now
-Notify("Murderer Behind", string.format("%d studs behind you", math.floor(distance + 0.5)), "Warning", 2.4, "Murderer")
+Notify(
+"Murderer Behind",
+string.format("%d studs behind you", math.floor(distance + 0.5)),
+"Warning",
+2.4,
+"Murderer"
+)
 end
 end
 if State.MurdererLOSWarning and distance <= 140 then
 local towardLocal = localRoot.Position - murderRoot.Position
-local lookingDot = towardLocal.Magnitude > 0.01 and murderRoot.CFrame.LookVector:Dot(towardLocal.Unit) or -1
-if lookingDot > 0.70 and HasLineOfSight(murderRoot, LP, localRoot) and now - State.LastLOSWarning >= State.MurdererWarningCooldown then
+local lookingDot = towardLocal.Magnitude > 0.01
+and murderRoot.CFrame.LookVector:Dot(towardLocal.Unit)
+or -1
+if lookingDot > 0.70
+and HasLineOfSight(murderRoot, LP, localRoot)
+and now - State.LastLOSWarning >= State.MurdererWarningCooldown
+then
 State.LastLOSWarning = now
-Notify("Murderer Line Of Sight", "Murderer is facing you with a clear line of sight", "Warning", 2.4, "Murderer")
+Notify(
+"Murderer Line Of Sight",
+"Murderer is facing you with a clear line of sight",
+"Warning",
+2.4,
+"Murderer"
+)
 end
 end
-if State.ClosingSpeedWarning and approachSpeed >= State.ClosingSpeedThreshold and distance <= 120 and now - State.LastClosingWarning >= State.MurdererWarningCooldown then
+if State.ClosingSpeedWarning
+and approachSpeed >= State.ClosingSpeedThreshold
+and distance <= 120
+and now - State.LastClosingWarning >= State.MurdererWarningCooldown
+then
 State.LastClosingWarning = now
-Notify("Murderer Closing Speed", string.format("Closing at %.1f studs/s", approachSpeed), "Warning", 2.4, "Murderer")
+Notify(
+"Murderer Closing Speed",
+string.format("Closing at %.1f studs/s", approachSpeed),
+"Warning",
+2.4,
+"Murderer"
+)
 end
 local knife = GetEquippedTool(murderer)
 local knifeEquipped = knife and string.lower(knife.Name) == "knife" or false
 if State.KnifeEquippedWarning and knifeEquipped and not State.KnifeWasEquipped then
-Notify("Knife Equipped", GetStreamerDisplayName(murderer) .. " equipped Knife", "Warning", 2.5, "Weapons")
+Notify(
+"Knife Equipped",
+GetStreamerDisplayName(murderer) .. " equipped Knife",
+"Warning",
+2.5,
+"Weapons"
+)
 end
 State.KnifeWasEquipped = knifeEquipped
 UpdateThreatHUD(murderer, distance, approachSpeed)
@@ -292,7 +398,15 @@ if owner then
 local tool = GetEquippedTool(owner)
 local equipped = tool and string.lower(tool.Name) == "gun" or false
 local was = State.GunOwnersEquipped[owner.Name] == true
-if equipped and not was then Notify("Gun Equipped", GetStreamerDisplayName(owner) .. " equipped Gun", "Info", 2.5, "Weapons") end
+if equipped and not was then
+Notify(
+"Gun Equipped",
+GetStreamerDisplayName(owner) .. " equipped Gun",
+"Info",
+2.5,
+"Weapons"
+)
+end
 State.GunOwnersEquipped[owner.Name] = equipped
 end
 end
@@ -306,16 +420,31 @@ if State.RoleArrowTarget == "Hero" then return GetHero() end
 return nil
 end
 Connect(RunService.RenderStepped, function()
-if State.ScreenshotMode or not State.RoleArrow then RoleArrowGui.Visible = false return end
+if State.ScreenshotMode or not State.RoleArrow then
+RoleArrowGui.Visible = false
+return
+end
 local player = GetRoleArrowPlayer()
 local root = GetRoot(player)
-if not player or not root or player == LP then RoleArrowGui.Visible = false return end
+if not player or not root or player == LP then
+RoleArrowGui.Visible = false
+return
+end
 RoleArrowGui.TextSize = State.RoleArrowSize
-SetEdgeArrow(RoleArrowGui, root.Position, GetRoleColor(player), State.RoleArrowRadius)
+SetEdgeArrow(
+RoleArrowGui,
+root.Position,
+GetRoleColor(player),
+State.RoleArrowRadius
+)
 end)
 XRayCache = setmetatable({}, {__mode = "k"})
 XRayActive = setmetatable({}, {__mode = "k"})
 function RestoreXRayPart(part)
 local old = XRayCache[part]
-if old ~= nil and part and part.Parent then pcall(function() part.LocalTransparencyModifier = old end) end
+if old ~= nil and part and part.Parent then
+pcall(function()
+part.LocalTransparencyModifier = old
+end)
+end
 end
