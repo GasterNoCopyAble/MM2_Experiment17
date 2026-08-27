@@ -1,8 +1,8 @@
 -- Experiment 17 | Private MM2 modular v7 | Target / teleport / bookmarks
 -- Semantic feature module. Loaded by init.lua into one shared runtime environment.
 
-TargetMainChoice
-BookmarkChoice
+TargetMainChoice = nil
+BookmarkChoice = nil
 BookmarkNameValue = "Bookmark"
 function SaveReturnPosition()
 local root = GetRoot(LP)

@@ -1,8 +1,8 @@
 -- Experiment 17 | Private MM2 modular v7 | Camera
 -- Semantic feature module. Loaded by init.lua into one shared runtime environment.
 
-SpectateChoice
-SpectateToggle
+SpectateChoice = nil
+SpectateToggle = nil
 function BuildPlayerNames()
 local values = {"None"}
 for _, player in ipairs(Players:GetPlayers()) do
@@ -36,7 +36,7 @@ Camera.CameraSubject = humanoid
 return true
 end
 FreecamOld = {}
-FreecamCF
+FreecamCF = nil
 FreecamPitch = 0
 FreecamYaw = 0
 FreecamLooking = false

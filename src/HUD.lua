@@ -56,7 +56,7 @@ TargetArrowGui.Font = Enum.Font.GothamBold
 TargetArrowGui.TextSize = 27
 TargetArrowGui.Visible = false
 TargetArrowGui.ZIndex = 79
-TargetTracerDrawing
+TargetTracerDrawing = nil
 if DrawingAvailable then
 TargetTracerDrawing = TrackDrawing(Drawing.new("Line"))
 TargetTracerDrawing.Thickness = 2

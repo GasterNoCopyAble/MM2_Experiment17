@@ -26,9 +26,9 @@ humanoid.JumpHeight =
 end
 end
 end)
-FlyVelocity
-FlyGyro
-FlyRoot
+FlyVelocity = nil
+FlyGyro = nil
+FlyRoot = nil
 function DestroyFlyObjects(root)
 if not root then return end
 for _, name in ipairs({"E17_FlyVelocity", "E17_FlyGyro"}) do
@@ -238,9 +238,9 @@ local position = positions and positions[1]
 if position then ClickTPAt(position) end
 end)
 end)
-GhostModel
-GhostRoot
-GhostHumanoid
+GhostModel = nil
+GhostRoot = nil
+GhostHumanoid = nil
 GhostMotorMap = {}
 GhostTransparencyCache = setmetatable({}, {__mode = "k"})
 function SetRealHidden(hidden)

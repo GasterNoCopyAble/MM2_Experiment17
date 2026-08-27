@@ -157,10 +157,10 @@ return a.Distance < b.Distance
 end)
 return candidates
 end
-GunESPObject
-CachedDroppedGun
+GunESPObject = nil
+CachedDroppedGun = nil
 CachedDroppedGunDistance = math.huge
-CachedNearestCoin
+CachedNearestCoin = nil
 function CleanupGunESP()
 if not GunESPObject then return end
 if GunESPObject.Highlight then GunESPObject.Highlight:Destroy() end
